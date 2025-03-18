@@ -31,7 +31,7 @@ const TruckProfile = () => {
   const [noRouteDetails, setNoRouteDetails] = useState<string | null>(null);
   const router = useRouter();
 
-  const server = "http://192.168.1.7:8080";
+  const server = "http://10.107.79.154:8080";
 
   useEffect(() => {
     const getDetails = async () => {
