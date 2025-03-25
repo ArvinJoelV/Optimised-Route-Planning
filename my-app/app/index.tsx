@@ -19,7 +19,7 @@ const SignIn = () => {
   const [truckNumber, setTruckNumber] = useState("");
   const [secureText, setSecureText] = useState(true);
 
-  const server = "http://10.107.79.154:8080";
+  const server = "http://10.21.236.151:8080";
 
   useEffect(() => {
     const checkLogin = async () => {

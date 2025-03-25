@@ -233,6 +233,7 @@ async def calculate_route(request: RouteRequest):
             fetch_nearby_pois(route_geometry, "fuel")
         )
 
+
         today = date.today()
 
         route_data = {

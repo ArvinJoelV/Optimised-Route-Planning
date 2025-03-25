@@ -31,7 +31,7 @@ const TruckProfile = () => {
   const [noRouteDetails, setNoRouteDetails] = useState<string | null>(null);
   const router = useRouter();
 
-  const server = "http://10.107.79.154:8080";
+  const server = "http://10.21.236.151:8080";
 
   useEffect(() => {
     const getDetails = async () => {
@@ -52,7 +52,7 @@ const TruckProfile = () => {
             Array.isArray(response.data.routes) &&
             response.data.routes.length > 0
           ) {
-            const formattedRoutes = response.data.routes.map((route) => ({
+            const formattedRo75utes = response.data.routes.map((route) => ({
               date: route.date,
               total_distance: route.total_distance,
               segments: route.combine || [],

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getItemAsync } from "expo-secure-store";
 
-const API_BASE_URL = "http://10.107.79.154:8080";
+const API_BASE_URL = "http://10.21.236.151:8080";
 
 export const getOptimizedRoute = async (
   stops: { lat: number; lng: number }[]

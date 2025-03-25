@@ -242,6 +242,23 @@ export default function SearchBarWithLogo() {
     }
   };
 
+  const findNearestIndex = (lng: number, lat: number) => {
+    let minDistance = Infinity;
+    let nearestIndex = -1;
+
+    optimizedRoute?.routeGeometry?.coordinates.forEach(
+      ([lng2, lat2], index) => {
+        const distance = Math.sqrt((lng - lng2) ** 2 + (lat - lat2) ** 2);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestIndex = index;
+        }
+      }
+    );
+
+    return nearestIndex;
+  };
+
   return (
     <SafeAreaProvider style={styles.container}>
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -338,15 +355,40 @@ export default function SearchBarWithLogo() {
               </Marker>
             ))}
 
-          {optimizedRoute?.routeGeometry?.coordinates && (
-            <Polyline
-              coordinates={optimizedRoute.routeGeometry.coordinates.map(
-                ([lng, lat]) => ({ latitude: lat, longitude: lng })
-              )}
-              strokeColor="blue"
-              strokeWidth={3}
-            />
-          )}
+          {optimizedRoute?.routeGeometry?.coordinates &&
+            optimizedRoute.routeOrder.map((stop, index) => {
+              if (index === optimizedRoute.routeOrder.length - 1) return null; // Skip last stop
+
+              const start = optimizedRoute.routeOrder[index];
+              const end = optimizedRoute.routeOrder[index + 1];
+
+              let startIndex = findNearestIndex(start.lng, start.lat);
+              let endIndex = findNearestIndex(end.lng, end.lat);
+
+              if (
+                startIndex === -1 ||
+                endIndex === -1 ||
+                startIndex >= endIndex
+              ) {
+                return null;
+              }
+
+              const segmentCoordinates =
+                optimizedRoute.routeGeometry.coordinates
+                  .slice(startIndex, endIndex + 1)
+                  .map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
+
+              const colors = ["red", "green", "blue", "purple"];
+
+              return (
+                <Polyline
+                  key={index}
+                  coordinates={segmentCoordinates}
+                  strokeColor={colors[index % colors.length]} // Assign a different color for each segment
+                  strokeWidth={4}
+                />
+              );
+            })}
         </MapView>
 
         {showButtons && (
@@ -355,7 +397,13 @@ export default function SearchBarWithLogo() {
           </TouchableOpacity>
         )}
 
-        <Dialog.Container visible={dialogVisible}>
+        <Dialog.Container
+          visible={dialogVisible}
+          contentStyle={{
+            borderRadius: 20,
+            padding: 20,
+          }}
+        >
           <Dialog.Title style={styles.dialogTitle}>Add Stop</Dialog.Title>
           <Dialog.Input
             style={styles.dialogInput}
@@ -397,7 +445,13 @@ export default function SearchBarWithLogo() {
             onZoomToLocation={onZoomToLocation}
           />
         )}
-        <Dialog.Container visible={routeDialogVisible}>
+        <Dialog.Container
+          visible={routeDialogVisible}
+          contentStyle={{
+            borderRadius: 20,
+            padding: 20,
+          }}
+        >
           <Dialog.Title style={styles.dialogTitle}>Selected Stops</Dialog.Title>
 
           {stops.map((stop, index) => (

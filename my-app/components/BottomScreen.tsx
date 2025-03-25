@@ -29,7 +29,7 @@ const CustomBottomSheetView = ({
   restaurants,
   onZoomToLocation,
 }: Props) => {
-  const snapPoints = useMemo(() => ["15%", "40%", "65%", "80%"], []);
+  const snapPoints = useMemo(() => ["15%", "40%", "65%", "75%"], []);
   const sheetRef = useRef<BottomSheet>(null);
   const [index, setIndex] = useState(0);
   const [currentSnapIndex, setCurrentSnapIndex] = useState(0);
@@ -41,7 +41,7 @@ const CustomBottomSheetView = ({
   ]);
 
   const renderRouteTab = () => (
-    <View style={styles.scene}>
+    <View style={{ flex: 1 }}>
       <FlatList
         data={segmentLinks}
         keyExtractor={(item, index) => index.toString()}
@@ -58,6 +58,7 @@ const CustomBottomSheetView = ({
             </Text>
           </View>
         )}
+        contentContainerStyle={{ paddingBottom: 20 }}
       />
     </View>
   );
@@ -116,10 +117,36 @@ const CustomBottomSheetView = ({
       snapPoints={snapPoints}
       index={0}
       onChange={setCurrentSnapIndex}
+      enableContentPanningGesture={false} // Disable dragging on content
+      enableHandlePanningGesture={true} // Allow dragging only on handle
       style={styles.bottomSheet}
+      handleComponent={() => (
+        <View>
+          <View style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>Drive</Text>
+            <View style={styles.centeredText}>
+              <Text style={styles.DistanceTitle}>
+                {parseFloat(approxDistance).toFixed(2)} KM
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                sheetRef.current?.close();
+                onClose();
+              }}
+              style={styles.closeButton}
+            >
+              <Icon name="close-outline" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     >
-      <BottomSheetView style={styles.contentContainer}>
-        <View style={styles.header}>
+      <BottomSheetView style={[styles.contentContainer, { flex: 1 }]}>
+        {/* <View style={styles.header}>
           <Text style={styles.title}>Drive</Text>
           <View style={styles.centeredText}>
             <Text style={styles.DistanceTitle}>
@@ -135,7 +162,7 @@ const CustomBottomSheetView = ({
           >
             <Icon name="close-outline" size={20} color="#666" />
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         <TabView
           navigationState={{ index, routes }}
@@ -192,6 +219,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     paddingVertical: 10,
+    paddingLeft: 15,
+    paddingRight: 15,
   },
   closeButton: {
     width: 30,
@@ -239,6 +268,18 @@ const styles = StyleSheet.create({
     color: "black",
     alignItems: "center",
     textAlign: "center",
+  },
+  handleContainer: {
+    alignItems: "center",
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+  },
+
+  handle: {
+    width: 50,
+    height: 5,
+    borderRadius: 10,
+    backgroundColor: "#ccc",
   },
 });
 
