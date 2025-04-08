@@ -5,6 +5,7 @@ from datetime import datetime
 class User(BaseModel):
     truck_id: str
     truck_number: str
+    role: str = Field(default="user")
 
 class RouteSegment(BaseModel):
     from_location: str

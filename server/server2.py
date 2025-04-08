@@ -236,4 +236,4 @@ async def root():
     return {"message": "Route Optimization API with OSRM directions is running!"}
 
 if __name__=="__main__":
-    uvicorn.run("server:app",port=8085, host="0.0.0.0",reload=True)
+    uvicorn.run("server:app",port=8086, host="0.0.0.0",reload=True)

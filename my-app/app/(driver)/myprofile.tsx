@@ -19,7 +19,7 @@ type EachRoute = {
 };
 
 type CombinedRoute = {
-  segments: EachRoute[];
+  combine: EachRoute[];
   total_distance: number;
   date: string;
 };
@@ -31,7 +31,7 @@ const TruckProfile = () => {
   const [noRouteDetails, setNoRouteDetails] = useState<string | null>(null);
   const router = useRouter();
 
-  const server = "http://10.21.236.151:8080";
+  const server = "http://10.199.75.151:8080";
 
   useEffect(() => {
     const getDetails = async () => {
@@ -52,11 +52,13 @@ const TruckProfile = () => {
             Array.isArray(response.data.routes) &&
             response.data.routes.length > 0
           ) {
-            const formattedRo75utes = response.data.routes.map((route) => ({
-              date: route.date,
-              total_distance: route.total_distance,
-              segments: route.combine || [],
-            }));
+            const formattedRoutes = response.data.routes.map(
+              (route: CombinedRoute) => ({
+                date: route.date,
+                total_distance: route.total_distance,
+                combine: route.combine || [],
+              })
+            );
             setRouteDetails(formattedRoutes);
           } else {
             setRouteDetails([]);
@@ -96,11 +98,13 @@ const TruckProfile = () => {
           Array.isArray(response.data.routes) &&
           response.data.routes.length > 0
         ) {
-          const formattedRoutes = response.data.routes.map((route) => ({
-            date: route.date,
-            total_distance: route.total_distance,
-            segments: route.combine || [],
-          }));
+          const formattedRoutes = response.data.routes.map(
+            (route: CombinedRoute) => ({
+              date: route.date,
+              total_distance: route.total_distance,
+              combine: route.combine || [],
+            })
+          );
           setRouteDetails(formattedRoutes);
         } else {
           setRouteDetails([]);
@@ -112,6 +116,19 @@ const TruckProfile = () => {
     } catch (err) {
       Alert.alert("Can't retrieve profile data");
     }
+  };
+
+  const getFormattedDate = (date: string | Date) => {
+    const formattedDate = new Date(date).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    return formattedDate;
   };
 
   return (
@@ -141,9 +158,11 @@ const TruckProfile = () => {
           keyExtractor={(item, index) => `route-${index}`}
           renderItem={({ item }) => (
             <View style={styles.routeCard}>
-              <Text style={styles.routeDate}>📅 {item.date}</Text>
-              {Array.isArray(item.segments) && item.segments.length > 0 ? (
-                item.segments.map((segment, index) => (
+              <Text style={styles.routeDate}>
+                📅 {getFormattedDate(item.date)}
+              </Text>
+              {Array.isArray(item.combine) && item.combine.length > 0 ? (
+                item.combine.map((segment, index) => (
                   <View key={`segment-${index}`} style={styles.routeDetails}>
                     <Text style={styles.routeText}>
                       {segment.start} → {segment.end}
@@ -160,7 +179,7 @@ const TruckProfile = () => {
                 <Text style={styles.routeText}>No segments available</Text>
               )}
               <Text style={styles.totalDistance}>
-                🚗 Total Distance: {item.total_distance?.toFixed(2) || "N/A"} km
+                🚛 Total Distance: {item.total_distance?.toFixed(2) || "N/A"} Km
               </Text>
             </View>
           )}

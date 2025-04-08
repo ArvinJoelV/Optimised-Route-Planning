@@ -7,6 +7,7 @@ import {
   Alert,
   StyleSheet,
   Image,
+  ImageBackground,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -19,13 +20,18 @@ const SignIn = () => {
   const [truckNumber, setTruckNumber] = useState("");
   const [secureText, setSecureText] = useState(true);
 
-  const server = "http://10.21.236.151:8080";
+  const server = "http://10.199.75.151:8080";
 
   useEffect(() => {
     const checkLogin = async () => {
       const token = await SecureStore.getItemAsync("authToken");
+      const userRole = await SecureStore.getItemAsync("userRole");
       if (token) {
-        router.replace("/(tabs)/home");
+        if (userRole === "admin") {
+          router.replace("/(admin)");
+        } else {
+          router.replace("/(driver)/home");
+        }
       }
     };
     checkLogin();
@@ -33,19 +39,25 @@ const SignIn = () => {
 
   const handleLogin = async () => {
     await SecureStore.deleteItemAsync("authToken");
-
+    await SecureStore.deleteItemAsync("userRole");
     try {
-      const response = await axios.post<{ success: boolean; token?: string }>(
-        `${server}/login`,
-        {
-          truck_id: truckId,
-          truck_number: truckNumber,
-        }
-      );
+      const response = await axios.post<{
+        success: boolean;
+        token?: string;
+        role?: string;
+      }>(`${server}/login`, {
+        truck_id: truckId,
+        truck_number: truckNumber,
+      });
 
-      if (response.data.success && response.data.token) {
+      if (response.data.success && response.data.token && response.data.role) {
         await SecureStore.setItemAsync("authToken", response.data.token);
-        router.push("/(tabs)/home");
+        await SecureStore.setItemAsync("userRole", response.data.role);
+        if (response.data.role === "admin") {
+          router.replace("/(admin)/(manage)/manage");
+        } else {
+          router.replace("/(driver)/home");
+        }
       }
     } catch (error: any) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -57,20 +69,24 @@ const SignIn = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require("C:/Users/Ashok Adithya/OneDrive - SSN-Institute/Big Basket/BigBasket/my-app/assets/images/backg.jpg")}
+      style={styles.container}
+    >
       <Image
         source={require("C:/Users/Ashok Adithya/OneDrive - SSN-Institute/Big Basket/BigBasket/my-app/assets/images/bigbasket-logo.png")}
         style={styles.logo}
       />
       <Text style={styles.title}>Truck Sign In</Text>
-
-      <TextInput
-        placeholder="Truck ID"
-        value={truckId}
-        onChangeText={setTruckId}
-        style={styles.input}
-        placeholderTextColor="#777"
-      />
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Truck ID"
+          value={truckId}
+          onChangeText={setTruckId}
+          style={styles.input}
+          placeholderTextColor="#777"
+        />
+      </View>
 
       <View style={styles.passwordContainer}>
         <TextInput
@@ -96,7 +112,7 @@ const SignIn = () => {
       <TouchableOpacity onPress={handleLogin} style={styles.button}>
         <Text style={styles.buttonText}>Sign In</Text>
       </TouchableOpacity>
-    </View>
+    </ImageBackground>
   );
 };
 
@@ -105,34 +121,24 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
   },
   title: {
     fontSize: 28,
     fontWeight: 500,
     marginBottom: 30,
-    color: "#333",
+    color: "#00FFFF",
   },
   input: {
-    width: 280,
+    flex: 1,
     height: 50,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingHorizontal: 15,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    backgroundColor: "#FFFFE0",
   },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
     width: 280,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFE0",
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#ccc",
@@ -147,12 +153,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     fontSize: 16,
+    backgroundColor: "#FFFFE0",
   },
   icon: {
     padding: 10,
   },
   button: {
-    backgroundColor: "#007BFF",
+    backgroundColor: "#00CCCC",
     paddingVertical: 10,
     paddingHorizontal: 30,
     borderRadius: 30,
@@ -162,14 +169,15 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   logo: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
     marginRight: 15,
     marginLeft: 5,
     marginBottom: 10,
+    borderRadius: 10,
   },
   buttonText: {
-    color: "#fff",
+    color: "#333333",
     fontSize: 18,
     fontWeight: "bold",
   },

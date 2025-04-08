@@ -1,4 +1,10 @@
-import React, { useState, useRef, useMemo, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useMemo,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -11,6 +17,7 @@ import {
   Text,
   FlatList,
   Pressable,
+  BackHandler,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import MapView, { UrlTile, Marker, Polyline } from "react-native-maps";
@@ -20,7 +27,7 @@ import Icon from "react-native-vector-icons/Ionicons";
 import { getOptimizedRoute } from "@/utils/api";
 import CustomBottomSheetView from "@/components/BottomScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 
 export default function SearchBarWithLogo() {
@@ -37,7 +44,7 @@ export default function SearchBarWithLogo() {
   });
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const [poiMarkers, setPoiMarkers] = useState<
-    { lat: number; lng: number; name: string }[]
+    { lat: number; lng: number; brand: string }[]
   >([]);
   const [markerCoords, setMarkerCoords] = useState<{
     latitude: number;
@@ -65,6 +72,23 @@ export default function SearchBarWithLogo() {
     restaurants: { lat: number; lng: number; brand: string }[];
     petrol_bunks: { lat: number; lng: number; brand: string }[];
   } | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        Alert.alert("Exit App", "Are you sure you want to exit?", [
+          { text: "Cancel", style: "cancel" },
+          { text: "Exit", onPress: () => BackHandler.exitApp() },
+        ]);
+        return true; // Prevent default back action
+      };
+
+      BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+      return () =>
+        BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+    }, [])
+  );
 
   useEffect(() => {
     const getTruckId = async () => {
@@ -204,6 +228,23 @@ export default function SearchBarWithLogo() {
       setShowFeatureButtons(true);
       setSelectedFeature(null);
       setStops([]);
+      setTimeout(() => {
+        if (routeData.route_order.length > 0) {
+          setRegion({
+            latitude: routeData.route_order[0].lat,
+            longitude: routeData.route_order[0].lng,
+            latitudeDelta: 10,
+            longitudeDelta: 10,
+          });
+
+          mapRef.current?.animateToRegion({
+            latitude: routeData.route_order[0].lat,
+            longitude: routeData.route_order[0].lng,
+            latitudeDelta: 10,
+            longitudeDelta: 10,
+          });
+        }
+      }, 500);
     } catch (error) {
       Alert.alert("Error", "Failed to fetch optimized route.");
     }
@@ -242,13 +283,31 @@ export default function SearchBarWithLogo() {
     }
   };
 
-  const findNearestIndex = (lng: number, lat: number) => {
+  const haversineDistance = (lat1, lon1, lat2, lon2) => {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const R = 6371;
+
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  };
+
+  const findNearestIndex = (lng, lat) => {
     let minDistance = Infinity;
     let nearestIndex = -1;
 
     optimizedRoute?.routeGeometry?.coordinates.forEach(
       ([lng2, lat2], index) => {
-        const distance = Math.sqrt((lng - lng2) ** 2 + (lat - lat2) ** 2);
+        const distance = haversineDistance(lat, lng, lat2, lng2);
         if (distance < minDistance) {
           minDistance = distance;
           nearestIndex = index;
@@ -345,7 +404,7 @@ export default function SearchBarWithLogo() {
               <Marker
                 key={index}
                 coordinate={{ latitude: poi.lat, longitude: poi.lng }}
-                title={poi.name}
+                title={poi.brand}
                 pinColor={poi.type === "petrol" ? "red" : "green"}
                 anchor={{ x: 0.5, y: 0.5 }}
               >
@@ -357,7 +416,7 @@ export default function SearchBarWithLogo() {
 
           {optimizedRoute?.routeGeometry?.coordinates &&
             optimizedRoute.routeOrder.map((stop, index) => {
-              if (index === optimizedRoute.routeOrder.length - 1) return null; // Skip last stop
+              if (index === optimizedRoute.routeOrder.length - 1) return null;
 
               const start = optimizedRoute.routeOrder[index];
               const end = optimizedRoute.routeOrder[index + 1];
@@ -365,26 +424,48 @@ export default function SearchBarWithLogo() {
               let startIndex = findNearestIndex(start.lng, start.lat);
               let endIndex = findNearestIndex(end.lng, end.lat);
 
-              if (
-                startIndex === -1 ||
-                endIndex === -1 ||
-                startIndex >= endIndex
-              ) {
-                return null;
-              }
-
               const segmentCoordinates =
-                optimizedRoute.routeGeometry.coordinates
-                  .slice(startIndex, endIndex + 1)
-                  .map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
+                optimizedRoute?.routeGeometry?.coordinates &&
+                startIndex !== -1 &&
+                endIndex !== -1
+                  ? startIndex < endIndex
+                    ? optimizedRoute.routeGeometry.coordinates
+                        .slice(startIndex, endIndex + 1)
+                        .map(([lng, lat]) => ({
+                          latitude: lat,
+                          longitude: lng,
+                        }))
+                    : [
+                        ...optimizedRoute.routeGeometry.coordinates
+                          .slice(startIndex)
+                          .map(([lng, lat]) => ({
+                            latitude: lat,
+                            longitude: lng,
+                          })),
+                        ...optimizedRoute.routeGeometry.coordinates
+                          .slice(0, endIndex + 1)
+                          .map(([lng, lat]) => ({
+                            latitude: lat,
+                            longitude: lng,
+                          })),
+                      ]
+                  : [];
 
-              const colors = ["red", "green", "blue", "purple"];
+              const colors = [
+                "red",
+                "green",
+                "blue",
+                "purple",
+                "orange",
+                "cyan",
+                "magenta",
+              ];
 
               return (
                 <Polyline
                   key={index}
                   coordinates={segmentCoordinates}
-                  strokeColor={colors[index % colors.length]} // Assign a different color for each segment
+                  strokeColor={colors[index % colors.length]} // Assign different colors for each segment
                   strokeWidth={4}
                 />
               );
@@ -411,10 +492,15 @@ export default function SearchBarWithLogo() {
             onChangeText={setNewStopLocation}
           />
           <Dialog.Button
+            style={{ fontSize: 16 }}
             label="Cancel"
             onPress={() => setDialogVisible(false)}
           />
-          <Dialog.Button label="Add" onPress={handleDialogSubmit} />
+          <Dialog.Button
+            style={{ fontSize: 16 }}
+            label="Add"
+            onPress={handleDialogSubmit}
+          />
         </Dialog.Container>
 
         <TouchableOpacity
@@ -579,12 +665,12 @@ const styles = StyleSheet.create({
   },
   dialogTitle: {
     color: "black",
-    fontSize: 23,
+    fontSize: 25,
   },
   dialogInput: {
     color: "#333333",
     paddingTop: 5,
-    fontSize: 18,
+    fontSize: 20,
   },
   clearButton: {
     position: "absolute",
