@@ -42,5 +42,5 @@ Backend:
 Database:
 
 - MongoDB (NoSQL, used for delivery locations, routes, trip history)
-- 
+
 ---
