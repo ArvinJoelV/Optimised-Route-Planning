@@ -1,4 +1,4 @@
-# Optimized Route Planning for BigBasket Trucks
+# Optimized Route Planning
 
 An efficient delivery route planner for logistics fleets, minimizing delivery effort and distance using greedy heuristics and a scalable system architecture.
 
